@@ -466,15 +466,13 @@ void HAL_HRTIM_MspPostInit(HRTIM_HandleTypeDef* hhrtim)
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**HRTIM1 GPIO Configuration
     PB12     ------> HRTIM1_CHC1
-    PB13     ------> HRTIM1_CHC2
-    PB14     ------> HRTIM1_CHD1
     PB15     ------> HRTIM1_CHD2
     PC6     ------> HRTIM1_CHF1
     PC7     ------> HRTIM1_CHF2
     PC8     ------> HRTIM1_CHE1
     PA8     ------> HRTIM1_CHA1
     */
-    GPIO_InitStruct.Pin = BUCKBOOST_P1_DRIVE_Pin|BUCKBOOST_N1_DRIVE_Pin|BUCKBOOST_N2_DRIVE_Pin|BUCKBOOST_P2_DRIVE_Pin;
+    GPIO_InitStruct.Pin = BUCKBOOST_P1_DRIVE_Pin|BUCKBOOST_P2_DRIVE_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -645,6 +643,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+    /* USART3 interrupt Init */
+    HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(USART3_IRQn);
     /* USER CODE BEGIN USART3_MspInit 1 */
 
     /* USER CODE END USART3_MspInit 1 */
@@ -675,6 +676,8 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
     */
     HAL_GPIO_DeInit(GPIOC, USART3_TX_Pin|USART3_RX_Pin);
 
+    /* USART3 interrupt DeInit */
+    HAL_NVIC_DisableIRQ(USART3_IRQn);
     /* USER CODE BEGIN USART3_MspDeInit 1 */
 
     /* USER CODE END USART3_MspDeInit 1 */
