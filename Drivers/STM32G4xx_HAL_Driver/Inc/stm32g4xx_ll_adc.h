@@ -4309,6 +4309,7 @@ __STATIC_INLINE void LL_ADC_SetOffsetState(ADC_TypeDef *ADCx, uint32_t Offsety, 
 {
   __IO uint32_t *preg = __ADC_PTR_REG_OFFSET(ADCx->OFR1, Offsety);
 
+
   MODIFY_REG(*preg,
              ADC_OFR1_OFFSET1_EN,
              OffsetState);

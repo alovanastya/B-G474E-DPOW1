@@ -23,11 +23,14 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+#define SAMPLE_COUNT 400   // точек на период
+#define AMPLITUDE 2000   // амплитуда
+#define OFFSET 2048 //2048     // смещение
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -94,6 +97,7 @@ void setPWM(uint16_t pwm_value);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+
 /* USER CODE END 0 */
 
 /**
@@ -139,7 +143,12 @@ int main(void)
   MX_USB_PCD_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(&htim1);
+  __HAL_DAC_ENABLE(&hdac3, DAC_CHANNEL_1);
+
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+
+
   // HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
 
   char msg[] = "MEOW!\r\n";
@@ -154,8 +163,25 @@ int main(void)
 
   //int curr_voltage_mV = (ch_res * 3300) / 4095;
   //printf("  CH%d=%d.%dV\r", chn, curr_voltage_mV / 1000, (curr_voltage_mV % 1000) / 100);
+
+  uint32_t sineWave[SAMPLE_COUNT];
+  for (int i = 0; i < SAMPLE_COUNT; i++)
+  {
+      sineWave[i] = OFFSET + AMPLITUDE * sin(2 * M_PI * i / SAMPLE_COUNT);
+  }
+
+  HAL_DAC_Start(&hdac1,DAC_CHANNEL_2);
   while (1)
   {
+	  for (int i = 0; i < SAMPLE_COUNT; i++)
+	  {
+	          HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, sineWave[i]);
+	          HAL_Delay(0.01);
+	  }
+
+
+	  ////
+	  /*
 	    HAL_ADC_Start(&hadc1);
 	       if (HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK)
 	       {
@@ -168,21 +194,8 @@ int main(void)
 
 	           HAL_UART_Transmit(&huart3, (uint8_t*)trans_str, strlen(trans_str), 1000);
 	       }
-	       HAL_Delay(5);
-
-
-	  /*
-	  HAL_ADC_Start(&hadc1); // запускаем преобразование сигнала АЦП
-	  if (HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK)
-	  {
-		  adc = HAL_ADC_GetValue(&hadc1);
-	  }
-	   // читаем полученное значение в переменную adc
-	  //HAL_ADC_Stop(&hadc1); // останавливаем АЦП (не обязательно)
-	  HAL_UART_Transmit(&huart3, (uint8_t*)"ADC\r\n", strlen("ADC %d\n"), 1000);
-	  HAL_Delay(1000);
-	  HAL_UART_Transmit(&huart3, (uint16_t*)adc, strlen(trans_str), 1000);
-	  HAL_Delay(1000);*/
+	       // HAL_Delay(5);
+*/
 
     /* USER CODE END WHILE */
 
@@ -192,7 +205,7 @@ int main(void)
     if(pwm_value == 50) step = -1;
 	pwm_value += step;
 	setPWM(pwm_value);
-	HAL_Delay(5);
+	// HAL_Delay(5);
 
 	if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_10) == GPIO_PIN_SET)
 	{
@@ -225,7 +238,7 @@ int main(void)
 	{
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
 	}
-	    HAL_Delay(100);
+	    //HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -511,6 +524,15 @@ static void MX_DAC1_Init(void)
   sConfig.DAC_ConnectOnChipPeripheral = DAC_CHIPCONNECT_INTERNAL;
   sConfig.DAC_UserTrimming = DAC_TRIMMING_FACTORY;
   if (HAL_DAC_ConfigChannel(&hdac1, &sConfig, DAC_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** DAC channel OUT2 config
+  */
+  sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
+  sConfig.DAC_ConnectOnChipPeripheral = DAC_CHIPCONNECT_EXTERNAL;
+  if (HAL_DAC_ConfigChannel(&hdac1, &sConfig, DAC_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
