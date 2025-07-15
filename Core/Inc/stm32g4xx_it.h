@@ -60,7 +60,6 @@ void EXTI4_IRQHandler(void);
 void ADC1_2_IRQHandler(void);
 void USB_HP_IRQHandler(void);
 void EXTI9_5_IRQHandler(void);
-void USART3_IRQHandler(void);
 void EXTI15_10_IRQHandler(void);
 void HRTIM1_Master_IRQHandler(void);
 void HRTIM1_TIMF_IRQHandler(void);

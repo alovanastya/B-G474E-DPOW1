@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,13 +62,13 @@ PCD_HandleTypeDef hpcd_USB_FS;
 
 /* USER CODE BEGIN PV */
 
+char trans_str[64] = {0,};
+uint16_t adc = 0;
 
-//------------------------------------------
-//------------------------------------------
-//------------------------------------------
-
+//-------------------------------------------
 uint16_t pwm_value = 0;
 int8_t step = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -142,28 +143,47 @@ int main(void)
   // HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
 
   char msg[] = "MEOW!\r\n";
-  HAL_UART_Receive_IT(&huart3, (uint8_t*)msg, strlen(msg));
-  HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 10000);  // HAL_MAX_DELAY
+  HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+  HAL_Delay(10);
 
-  uint8_t transmitBuffer[4];
-  uint8_t receiveBuffer[4];
-
-  for (unsigned char i = 0; i < 4; i++)
-   {
-           transmitBuffer[i] = i + 1;
-           receiveBuffer[i] = 0;
-   }
-
-   HAL_UART_Receive_IT(&huart3, receiveBuffer, 4);
-   HAL_UART_Transmit_IT(&huart3, transmitBuffer, 4);
-
-  HAL_Delay(100);
+  HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  //int curr_voltage_mV = (ch_res * 3300) / 4095;
+  //printf("  CH%d=%d.%dV\r", chn, curr_voltage_mV / 1000, (curr_voltage_mV % 1000) / 100);
   while (1)
   {
+	    HAL_ADC_Start(&hadc1);
+	       if (HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK)
+	       {
+	           uint16_t adc_value = HAL_ADC_GetValue(&hadc1);
+	           uint32_t voltage_mV = (adc_value * 3300) / 4095;
+
+	           snprintf(trans_str, sizeof(trans_str), "ADC: %lu.%luV\r",
+	                    voltage_mV / 1000,
+	                    (voltage_mV % 1000) / 100);
+
+	           HAL_UART_Transmit(&huart3, (uint8_t*)trans_str, strlen(trans_str), 1000);
+	       }
+	       HAL_Delay(5);
+
+
+	  /*
+	  HAL_ADC_Start(&hadc1); // запускаем преобразование сигнала АЦП
+	  if (HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK)
+	  {
+		  adc = HAL_ADC_GetValue(&hadc1);
+	  }
+	   // читаем полученное значение в переменную adc
+	  //HAL_ADC_Stop(&hadc1); // останавливаем АЦП (не обязательно)
+	  HAL_UART_Transmit(&huart3, (uint8_t*)"ADC\r\n", strlen("ADC %d\n"), 1000);
+	  HAL_Delay(1000);
+	  HAL_UART_Transmit(&huart3, (uint16_t*)adc, strlen(trans_str), 1000);
+	  HAL_Delay(1000);*/
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -172,10 +192,7 @@ int main(void)
     if(pwm_value == 50) step = -1;
 	pwm_value += step;
 	setPWM(pwm_value);
-	// HAL_Delay(5);
-
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
+	HAL_Delay(5);
 
 	if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_10) == GPIO_PIN_SET)
 	{
@@ -312,7 +329,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Channel = ADC_CHANNEL_2;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
