@@ -28,15 +28,16 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define SAMPLE_COUNT_1 1000
-#define SAMPLE_COUNT_2 10000
 
-//#define SAMPLE_COUNT_1 2000
+#define M_PI		   3.14159265358979323846
+#define Fs             100000.0f
+#define AMPLITUDE_1    0.05f
+#define AMPLITUDE_2    1.0f
+#define F1             100.0f
+#define F2             10.0f
+#define SAMPLE_COUNT_1 (uint32_t)(Fs / F1)
+#define SAMPLE_COUNT_2 (uint32_t)(Fs / F2)
 
-#define AMPLITUDE 0.5 //1000   // амплитуда
-#define AMPLITUDE_1 1
-#define AMPLITUDE_2 200
-#define OFFSET 2048 //2048     // смещение
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -180,51 +181,29 @@ int main(void)
   //int curr_voltage_mV = (ch_res * 3300) / 4095;
   //printf("  CH%d=%d.%dV\r", chn, curr_voltage_mV / 1000, (curr_voltage_mV % 1000) / 100);
 
-  uint32_t sineWave_1[SAMPLE_COUNT_1 + 1];
+  uint32_t sineWave_1[SAMPLE_COUNT_1];
   for (int i = 0; i < SAMPLE_COUNT_1; i++)
   {
-      // sineWave_1[i] = OFFSET + AMPLITUDE_2 * sin(2 * M_PI * i / SAMPLE_COUNT_1);
-	  sineWave_1[i] = (int)( 2048 * ( 0.05 * (sin((2 * M_PI * i * 100)  / 100000 )+ 1)));
+      sineWave_1[i] = (int)(2047 * (AMPLITUDE_1 * (sin((2 * M_PI * i * F1) / Fs) + 1)));
   }
 
-
-  uint32_t sineWave_2[SAMPLE_COUNT_2 + 1];
-  for (int i = 0; i < SAMPLE_COUNT_2 - 1; i++)
+  uint32_t sineWave_2[SAMPLE_COUNT_2];
+  for (int i = 0; i < SAMPLE_COUNT_2; i++)
   {
-      //sineWave_2[i] = OFFSET + AMPLITUDE * sin(2 * M_PI * i / SAMPLE_COUNT_2);
-	  sineWave_2[i] = (int)( 2048 * ( AMPLITUDE * (sin((2 * M_PI * i * 10)  / 100000 )+ 1)));
+      sineWave_2[i] = (int)(2047 * (AMPLITUDE_2 * (sin((2 * M_PI * i * F2) / Fs) + 1)));
   }
 
-
-  uint32_t sineWave_3[SAMPLE_COUNT_1+1];
+  uint32_t sineWave_3[SAMPLE_COUNT_1];
   for (int i = 0; i < SAMPLE_COUNT_1; i++)
   {
-	  sineWave_3[i] = (sineWave_1[i] + sineWave_2[i])/2;
+      sineWave_3[i] = (sineWave_1[i] + sineWave_2[i]) / 2;
   }
-
-
-  /*
-   * последние два элемента массива sineWave_2 почему-то получаются кривые,
-   * из-за этого на осциллографе появляются небольшие полосы на месте стыка.
-   * [0] = 1024, ..., [9998] = 1022, [9999] = 409, [1000] = 1638.
-   * поэтому делаю так (последние два не подаю)
-   *  HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_2,(uint32_t*)sineWave_2,SAMPLE_COUNT_2 - 2,DAC_ALIGN_12B_R);
-   */
 
    // HAL_DAC_Start(&hdac1,DAC_CHANNEL_2);
    HAL_TIM_Base_Start(&htim6);
    HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_2,(uint32_t*)sineWave_3,SAMPLE_COUNT_1,DAC_ALIGN_12B_R);
   while (1)
   {
-
-	  for (int i = 0; i < SAMPLE_COUNT_2; i++)
-	  {
-	         // HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, sineWave_2[i]);
-	         //  HAL_Delay(0.01);
-
-		  HAL_Delay(0.01);
-	  }
-
 
 	  ////
 /*
