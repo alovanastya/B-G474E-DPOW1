@@ -28,7 +28,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define SAMPLE_COUNT 400   // точек на период
+#define SAMPLE_COUNT_1 400
+#define SAMPLE_COUNT_2 200// точек на период
 #define AMPLITUDE 2000   // амплитуда
 #define OFFSET 2048 //2048     // смещение
 /* USER CODE END PTD */
@@ -54,12 +55,18 @@ COMP_HandleTypeDef hcomp6;
 DAC_HandleTypeDef hdac1;
 DAC_HandleTypeDef hdac2;
 DAC_HandleTypeDef hdac3;
+DMA_HandleTypeDef hdma_dac1_ch2;
+DMA_HandleTypeDef hdma_dac1_ch1;
 
 HRTIM_HandleTypeDef hhrtim1;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim6;
+DMA_HandleTypeDef hdma_tim6_up;
 
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef hdma_usart3_rx;
+DMA_HandleTypeDef hdma_usart3_tx;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
@@ -77,6 +84,7 @@ int8_t step = 0;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_COMP2_Init(void);
 static void MX_COMP3_Init(void);
@@ -90,6 +98,7 @@ static void MX_UCPD1_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_PCD_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 void setPWM(uint16_t pwm_value);
 /* USER CODE END PFP */
@@ -129,6 +138,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
   MX_COMP2_Init();
   MX_COMP3_Init();
@@ -142,18 +152,19 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USB_PCD_Init();
   MX_TIM1_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim1);
+
   __HAL_DAC_ENABLE(&hdac3, DAC_CHANNEL_1);
+  __HAL_DAC_ENABLE(&hdac1, DAC_CHANNEL_2);
 
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 
-
-  // HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
-
   char msg[] = "MEOW!\r\n";
-  HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-  HAL_Delay(10);
+  // HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+  HAL_UART_Transmit_DMA(&huart3, (uint8_t*)msg, strlen(msg));
+  HAL_Delay(5);
 
   HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
   /* USER CODE END 2 */
@@ -164,24 +175,43 @@ int main(void)
   //int curr_voltage_mV = (ch_res * 3300) / 4095;
   //printf("  CH%d=%d.%dV\r", chn, curr_voltage_mV / 1000, (curr_voltage_mV % 1000) / 100);
 
-  uint32_t sineWave[SAMPLE_COUNT];
-  for (int i = 0; i < SAMPLE_COUNT; i++)
+  uint32_t sineWave_1[SAMPLE_COUNT_1];
+  for (int i = 0; i < SAMPLE_COUNT_1; i++)
   {
-      sineWave[i] = OFFSET + AMPLITUDE * sin(2 * M_PI * i / SAMPLE_COUNT);
+      sineWave_1[i] = OFFSET + AMPLITUDE * sin(2 * M_PI * i / SAMPLE_COUNT_1);
   }
 
-  HAL_DAC_Start(&hdac1,DAC_CHANNEL_2);
+
+  uint32_t sineWave_2[SAMPLE_COUNT_2];
+  for (int i = 0; i < SAMPLE_COUNT_2; i++)
+  {
+      sineWave_2[i] = OFFSET + AMPLITUDE * sin(2 * M_PI * i / SAMPLE_COUNT_2);
+  }
+
+
+  /*
+  uint32_t sineWave_3[SAMPLE_COUNT_1];
+  for (int i = 0; i < SAMPLE_COUNT_1; i++)
+  {
+	  sineWave_3[i] = sineWave_1[i] + sineWave_2[i];
+  }
+  */
+
+   // HAL_DAC_Start(&hdac1,DAC_CHANNEL_2);
+   HAL_TIM_Base_Start(&htim6);
+    HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_2,(uint32_t*)sineWave_1,SAMPLE_COUNT_1,DAC_ALIGN_12B_R);
   while (1)
   {
-	  for (int i = 0; i < SAMPLE_COUNT; i++)
+/*
+	  for (int i = 0; i < SAMPLE_COUNT_2; i++)
 	  {
-	          HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, sineWave[i]);
+	          HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, sineWave_2[i]);
 	          HAL_Delay(0.01);
 	  }
-
+*/
 
 	  ////
-	  /*
+/*
 	    HAL_ADC_Start(&hadc1);
 	       if (HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK)
 	       {
@@ -194,7 +224,7 @@ int main(void)
 
 	           HAL_UART_Transmit(&huart3, (uint8_t*)trans_str, strlen(trans_str), 1000);
 	       }
-	       // HAL_Delay(5);
+	        HAL_Delay(5);
 */
 
     /* USER CODE END WHILE */
@@ -431,11 +461,9 @@ static void MX_COMP4_Init(void)
 {
 
   /* USER CODE BEGIN COMP4_Init 0 */
-
   /* USER CODE END COMP4_Init 0 */
 
   /* USER CODE BEGIN COMP4_Init 1 */
-
   /* USER CODE END COMP4_Init 1 */
   hcomp4.Instance = COMP4;
   hcomp4.Init.InputPlus = COMP_INPUT_PLUS_IO1;
@@ -463,11 +491,9 @@ static void MX_COMP6_Init(void)
 {
 
   /* USER CODE BEGIN COMP6_Init 0 */
-
   /* USER CODE END COMP6_Init 0 */
 
   /* USER CODE BEGIN COMP6_Init 1 */
-
   /* USER CODE END COMP6_Init 1 */
   hcomp6.Instance = COMP6;
   hcomp6.Init.InputPlus = COMP_INPUT_PLUS_IO1;
@@ -530,6 +556,7 @@ static void MX_DAC1_Init(void)
 
   /** DAC channel OUT2 config
   */
+  sConfig.DAC_Trigger = DAC_TRIGGER_T6_TRGO;
   sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
   sConfig.DAC_ConnectOnChipPeripheral = DAC_CHIPCONNECT_EXTERNAL;
   if (HAL_DAC_ConfigChannel(&hdac1, &sConfig, DAC_CHANNEL_2) != HAL_OK)
@@ -832,6 +859,44 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 1700;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 100;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
   * @brief UCPD1 Initialization Function
   * @param None
   * @retval None
@@ -954,6 +1019,35 @@ static void MX_USB_PCD_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMAMUX1_CLK_ENABLE();
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+  /* DMA1_Channel2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+  /* DMA1_Channel3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+  /* DMA1_Channel4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+  /* DMA1_Channel5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -1053,7 +1147,6 @@ void setPWM(uint16_t value)
     HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3); // таймер №1, канал №3
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 }
-
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
