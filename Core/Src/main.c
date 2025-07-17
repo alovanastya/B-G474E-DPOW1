@@ -28,15 +28,14 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
-#define M_PI		   3.14159265358979323846
+#define M_PI           3.14159265358979323846
 #define Fs             100000.0f
-#define AMPLITUDE_1    0.05f
+#define AMPLITUDE_1    0.5f
 #define AMPLITUDE_2    1.0f
-#define F1             100.0f
-#define F2             10.0f
-#define SAMPLE_COUNT_1 (uint32_t)(Fs / F1)
-#define SAMPLE_COUNT_2 (uint32_t)(Fs / F2)
+#define F1             1000.0f
+#define F2             100.0f
+#define DURATION       0.02f
+#define SAMPLE_COUNT   (uint32_t)(Fs * DURATION)
 
 /* USER CODE END PTD */
 
@@ -181,27 +180,28 @@ int main(void)
   //int curr_voltage_mV = (ch_res * 3300) / 4095;
   //printf("  CH%d=%d.%dV\r", chn, curr_voltage_mV / 1000, (curr_voltage_mV % 1000) / 100);
 
-  uint32_t sineWave_1[SAMPLE_COUNT_1];
-  for (int i = 0; i < SAMPLE_COUNT_1; i++)
-  {
-      sineWave_1[i] = (int)(2047 * (AMPLITUDE_1 * (sin((2 * M_PI * i * F1) / Fs) + 1)));
-  }
 
-  uint32_t sineWave_2[SAMPLE_COUNT_2];
-  for (int i = 0; i < SAMPLE_COUNT_2; i++)
-  {
-      sineWave_2[i] = (int)(2047 * (AMPLITUDE_2 * (sin((2 * M_PI * i * F2) / Fs) + 1)));
-  }
-
-  uint32_t sineWave_3[SAMPLE_COUNT_1];
-  for (int i = 0; i < SAMPLE_COUNT_1; i++)
-  {
-      sineWave_3[i] = (sineWave_1[i] + sineWave_2[i]) / 2;
-  }
+  /*
 
    // HAL_DAC_Start(&hdac1,DAC_CHANNEL_2);
    HAL_TIM_Base_Start(&htim6);
    HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_2,(uint32_t*)sineWave_3,SAMPLE_COUNT_1,DAC_ALIGN_12B_R);
+
+   */
+
+  uint32_t sineWave_1[SAMPLE_COUNT];
+  uint32_t sineWave_2[SAMPLE_COUNT];
+  uint32_t sineWave_3[SAMPLE_COUNT];
+
+  for (int i = 0; i < SAMPLE_COUNT; i++)
+  {
+      sineWave_1[i] = (uint32_t)(2047 * (AMPLITUDE_1 * (sin((2 * M_PI * i * F1) / Fs) + 1)));
+      sineWave_2[i] = (uint32_t)(2047 * (AMPLITUDE_2 * (sin((2 * M_PI * i * F2) / Fs) + 1)));
+      sineWave_3[i] = (sineWave_1[i] + sineWave_2[i]) / 2;
+  }
+
+  HAL_TIM_Base_Start(&htim6);
+  HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_2, (uint32_t*)sineWave_3, SAMPLE_COUNT, DAC_ALIGN_12B_R);
   while (1)
   {
 
@@ -225,13 +225,13 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
+/*
 	if(pwm_value == 0) step = 1;
-    if(pwm_value == 50) step = -1;
+    if(pwm_value == 500) step = -1;
 	pwm_value += step;
 	setPWM(pwm_value);
 	// HAL_Delay(5);
-
+*/
 	if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_10) == GPIO_PIN_SET)
 	{
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
