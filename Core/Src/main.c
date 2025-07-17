@@ -192,12 +192,21 @@ int main(void)
   uint32_t sineWave_1[SAMPLE_COUNT];
   uint32_t sineWave_2[SAMPLE_COUNT];
   uint32_t sineWave_3[SAMPLE_COUNT];
-
+/*
   for (int i = 0; i < SAMPLE_COUNT; i++)
   {
       sineWave_1[i] = (uint32_t)(2047 * (AMPLITUDE_1 * (sin((2 * M_PI * i * F1) / Fs) + 1)));
       sineWave_2[i] = (uint32_t)(2047 * (AMPLITUDE_2 * (sin((2 * M_PI * i * F2) / Fs) + 1)));
       sineWave_3[i] = (sineWave_1[i] + sineWave_2[i]) / 2;
+  }
+  */
+
+  for (int i = 0; i < SAMPLE_COUNT; i++)
+  {
+  	float sin1 = AMPLITUDE_1 * sin(2 * M_PI * F1 * i / Fs);
+  	float sin2 = AMPLITUDE_2 * sin(2 * M_PI * F2 * i / Fs);
+  	float mul = sin1 * sin2;
+  	sineWave_3[i] = (uint32_t)(2047.5f * (mul + 1.0f));
   }
 
   HAL_TIM_Base_Start(&htim6);
